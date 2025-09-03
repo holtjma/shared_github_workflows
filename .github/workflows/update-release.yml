@@ -2,11 +2,6 @@ name: Update Release
 
 on:
   workflow_call:
-    inputs:
-      tag:
-        description: 'Tag to update (e.g., v0.8.1)'
-        required: true
-        type: string
     secrets:
       token:
         description: 'GitHub token - write permissions required'
