@@ -1,0 +1,134 @@
+# This workflow creates a release for a given tag.
+# It uses the rust-static-build workflow to build the binary and then creates a release with the changelog notes matching the version
+# Steps:
+# - Extract the changelog section for the version
+# - Call the rust-static-build workflow to build the binary and tarball wrapping the binary
+# - Download the changelog artifact and the tarball artifact
+# - Create the release with the changelog notes and the tarball artifact
+# Errors:
+# - If no changelog is found for the version, and fail_if_no_changelog is true, the workflow will fail
+# - If the build fails, the workflow will fail
+
+name: Create Release
+
+on:
+  # in theory, workflow_dispatch could be here also; but we are trying to prevent accidental releases
+  workflow_call:
+    inputs:
+      tag:
+        description: 'Tag to update (e.g., v0.8.1)'
+        required: true
+        type: string
+      rust_version:
+        description: 'Rust Docker image version'
+        default: 'latest'
+        type: string
+      fail_if_no_changelog:
+        description: 'Fail if no changelog is found for the version'
+        default: true
+        type: boolean
+
+jobs:
+  # Extract the changelog section for the version.
+  # This expects a CHANGELOG.md file in the root of the repository.
+  # The format of the CHANGELOG.md file is expected to be:
+  # # v0.8.1
+  # ## Changes
+  # - New feature 1
+  # - New feature 2
+  # ## Fixed
+  # - Bug fix 1
+  extract-changelog:
+    name: Extract changelog section
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Extract changelog section
+      id: changelog
+      run: |
+        # Find the changelog section for this version
+        if grep -q "^# ${{ inputs.tag }}$" CHANGELOG.md; then
+          # Extract from the version header to the next version header or end of file
+          awk '
+            /^# ${{ inputs.tag }}$/ { 
+              in_section = 1; 
+              next 
+            }
+            /^# v[0-9]+\.[0-9]+\.[0-9]+$/ && in_section { 
+              exit 
+            }
+            in_section { 
+              print 
+            }
+          ' CHANGELOG.md > release_body.txt
+        else
+          if [[ "${{ inputs.fail_if_no_changelog }}" != "false" ]]; then
+            echo "Failing because no changelog was found for version ${{ inputs.tag }}"
+            exit 1
+          else
+            echo "No changelog found for version ${{ inputs.tag }}" > release_body.txt
+          fi
+        fi
+
+        # Add a separator and boilerplate about the automation
+        echo "" >> release_body.txt
+        echo "---" >> release_body.txt
+        echo "" >> release_body.txt
+        echo "Automated release created from tag ${{ inputs.tag }} and commit ${{ github.sha }}" >> release_body.txt
+
+    - name: Upload changelog artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-changelog
+        path: release_body.txt
+
+  # Build the binary and tarball wrapping the binary
+  call-create-static-release:
+    name: Call rust-static-build workflow
+    needs: extract-changelog
+    #uses: holtjma/shared_github_workflows/.github/workflows/rust-static-build.yml@main # TODO: do we need to put a hash on this?
+    uses: ./.github/workflows/rust-static-build.yml # TODO: do we need to put a hash on this?
+    with:
+      rust_version: ${{ inputs.rust_version }}
+      binary_name: test_release_workflow
+
+  # Create the release with the changelog notes and the tarball artifact
+  create-release:
+    name: Create release
+    needs: [extract-changelog, call-create-static-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Download the changelog artifact
+    - name: Download changelog artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: release-changelog
+        path: ./
+
+    # Download the tarball artifact
+    - name: Download tarball artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: rust-tarball-x86_64-linux
+        path: ./artifacts
+
+    # Create the release with the changelog notes and the tarball artifact
+    - name: Upload release
+      uses: softprops/action-gh-release@v1
+      with:
+        name: test_release_workflow ${{ inputs.tag }}
+        tag_name: ${{ inputs.tag }}
+        body_path: release_body.txt
+        files: |
+          artifacts/*.tar.gz
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

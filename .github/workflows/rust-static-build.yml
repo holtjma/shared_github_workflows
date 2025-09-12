@@ -1,0 +1,100 @@
+# This workflow builds a static binary and creates a tarball wrapping the binary.
+# It generally follows our build pattern used at PacBio, where a project has a single binary file associated with it.
+# The version of the binary is derived from the binary file itself, using the -V flag.
+# Generally, this would print something like: "tool_name v0.1.0-6bb9635"
+# Steps:
+# - Checkout the code
+# - Make sure the repository is owned by the user, vergen (git describe)will fail if it is not
+# - Install the x86_64-unknown-linux-gnu target (if not already in image)
+# - Build the static binary
+# - Upload the binary artifact
+# - Create the tarball, which includes the binary and md5sum
+# - Upload the tarball artifact
+# Inputs:
+# - rust_version - the Rust Docker image version to build with, default is latest
+# - binary_name - the name of the binary to build, required and expected to match what comes from cargo build
+# Outputs:
+# - artifact/rust-binary-x86_64-linux - the compiled binary, the file itself should be named the same as the binary_name input
+# - artifact/rust-tarball-x86_64-linux - the tarball wrapping the binary; format of filename should be tool_name-v0.1.0-x86_64-unknown-linux-gnu.tar.gz
+# Maintenance:
+# - if we have a multi-binary project, we will need to update something here to handle that
+
+name: Rust Static Build
+
+on:
+  workflow_call:
+    inputs:
+      rust_version:
+        description: 'Rust Docker image version'
+        default: 'latest'
+        type: string
+      binary_name:
+        description: 'Binary name'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Or a self-hosted runner if preferred
+    container: rust:${{ inputs.rust_version }} # Uses the official Rust Docker image
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Make sure the repository is owned by the user, vergen (git describe)will fail if it is not
+    - name: Chown repository to enable git describe
+      run: chown -R $(id -u):$(id -g) $PWD
+
+    # Install the x86_64-unknown-linux-gnu target (if not already in image)
+    - name: Install x86_64-unknown-linux-gnu target (if not already in image)
+      run: rustup target add x86_64-unknown-linux-gnu
+
+    # Build the static binary
+    - name: Build static binary
+      run: cargo build --release --target x86_64-unknown-linux-gnu
+      env:
+        RUSTFLAGS: "-C target-feature=+crt-static -C relocation-model=static"
+
+    # Upload the binary artifact
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: rust-binary-x86_64-linux
+        path: target/x86_64-unknown-linux-gnu/release/${{ inputs.binary_name }}
+    
+    # Create the tarball, which includes the binary and md5sum
+    - name: Create tarball
+      id: create_tarball
+      env:
+        TOOL_NAME: ${{ inputs.binary_name }}
+        RELEASE_FOLDER: release
+      run: |
+        # make and populate this particular version
+        mkdir -p ${RELEASE_FOLDER}
+        BINARY_FILE=./target/x86_64-unknown-linux-gnu/release/${TOOL_NAME}
+        VERSION=`${BINARY_FILE} -V | awk -F '[ -]' '{print $2}'`
+        TAR_FOLDER="${TOOL_NAME}-v${VERSION}-x86_64-unknown-linux-gnu"
+        TARBALL="${TAR_FOLDER}.tar.gz"
+        VERSION_FOLDER="${RELEASE_FOLDER}/${TAR_FOLDER}"
+        mkdir -p ${VERSION_FOLDER}
+        cp ${BINARY_FILE} ${VERSION_FOLDER}/${TOOL_NAME}
+
+        # generate an md5sum
+        (cd ${VERSION_FOLDER} && \
+            md5sum ${TOOL_NAME} > ${TOOL_NAME}.md5)
+
+        # finally make the tarball
+        (cd ${RELEASE_FOLDER} && \
+            tar -czvf ${TARBALL} ${TAR_FOLDER})
+        
+        echo "tarball=${TARBALL}" >> $GITHUB_OUTPUT
+        ls -l ${RELEASE_FOLDER}/${TARBALL}
+
+    # Upload the tarball artifact
+    - name: Upload tarball
+      uses: actions/upload-artifact@v4
+      with:
+        name: rust-tarball-x86_64-linux
+        path: release/${{ steps.create_tarball.outputs.tarball }}
+        if-no-files-found: error
