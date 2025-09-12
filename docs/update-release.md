@@ -1,5 +1,6 @@
-# GitHub Actions Workflows
-This action will parse a CHANGELOG.md file and update a release that is tagged as `v*` with the CHANGELOG information.
+# Update Release Workflow
+
+This workflow will parse a CHANGELOG.md file and update a release that is tagged as `v*` with the CHANGELOG information.
 See below for formatting details.
 
 ## Quickstart
