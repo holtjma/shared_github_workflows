@@ -16,6 +16,14 @@ on:
         description: 'Tag to create release for (e.g., v0.8.1)'
         required: true
         type: string
+      binary_name:
+        description: 'Binary name (must match Cargo.toml)'
+        required: true
+        type: string
+      release_name:
+        description: 'Release name (default: Release)'
+        default: 'Release'
+        type: string
       rust_version:
         description: 'Rust Docker image version'
         default: 'latest'
@@ -30,6 +38,8 @@ jobs:
     uses: holtjma/shared_github_workflows/.github/workflows/create-release.yml@main
     with:
       tag: ${{ inputs.tag }}
+      binary_name: ${{ inputs.binary_name }}
+      release_name: ${{ inputs.release_name }}
       rust_version: ${{ inputs.rust_version }}
       fail_if_no_changelog: ${{ inputs.fail_if_no_changelog }}
     secrets:
@@ -49,13 +59,15 @@ The `create-release.yml` workflow performs the following steps:
 ### Inputs
 
 - `tag` (required): The version tag to create a release for (e.g., `v0.8.1`)
+- `binary_name` (required): The name of the binary to build (must match `Cargo.toml`)
+- `release_name` (optional): The name for the release (default: `Release`)
 - `rust_version` (optional): Rust Docker image version to use for building (default: `latest`)
 - `fail_if_no_changelog` (optional): Whether to fail if no changelog is found (default: `true`)
 
 ### Outputs
 
 - Creates a GitHub release with:
-  - Release name: `{binary_name} {tag}`
+  - Release name: `{release_name} {tag}`
   - Release body: Extracted changelog content
   - Binary artifacts: Tarball containing the static binary and MD5 checksum
 
