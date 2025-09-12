@@ -52,7 +52,8 @@ The `create-release.yml` workflow performs the following steps:
 
 1. **Extracts changelog section** for the specified version from `CHANGELOG.md`
 2. **Builds static binary** using the `rust-static-build` workflow
-3. **Creates GitHub release** with changelog notes and binary artifacts
+3. **Creates tag** if it doesn't already exist
+4. **Creates GitHub release** with changelog notes and binary artifacts
 
 ## Workflow Details
 

@@ -95,16 +95,39 @@ jobs:
   # Build the binary and tarball wrapping the binary
   call-create-static-release:
     name: Call rust-static-build workflow
-    needs: extract-changelog
     uses: ./.github/workflows/rust-static-build.yml # TODO: do we need to put a hash on this?
     with:
       rust_version: ${{ inputs.rust_version }}
       binary_name: ${{ inputs.binary_name }}
 
+  # Check and create tag, which is required prior to creating the release
+  create-tag:
+    name: Check and create tag
+    runs-on: ubuntu-latest
+    needs: [call-create-static-release, extract-changelog] # needs to run after the static build and changelog extraction have both succeeded
+    steps:
+    - name: Check if tag already exists
+      uses: mukunku/tag-exists-action@v1.6.0
+      id: check_tag
+      with:
+        tag: '${{ inputs.tag }}'
+
+    - name: Create tag
+      if: steps.check_tag.outputs.exists == 'false'
+      uses: actions/github-script@v5
+      with:
+        script: |
+          github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: 'refs/tags/${{ inputs.tag }}',
+            sha: context.sha
+          })
+
   # Create the release with the changelog notes and the tarball artifact
   create-release:
     name: Create release
-    needs: [extract-changelog, call-create-static-release]
+    needs: create-tag # needs to run after the static build, changelog extraction, and tag creation have all succeeded
     runs-on: ubuntu-latest
     permissions:
       contents: write

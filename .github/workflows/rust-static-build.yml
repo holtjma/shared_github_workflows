@@ -50,6 +50,12 @@ jobs:
     - name: Install x86_64-unknown-linux-gnu target (if not already in image)
       run: rustup target add x86_64-unknown-linux-gnu
 
+    # Test the static build
+    - name: Test static build
+      run: cargo test --release --all-targets --target x86_64-unknown-linux-gnu -- --include-ignored
+      env:
+        RUSTFLAGS: "-C target-feature=+crt-static -C relocation-model=static"
+
     # Build the static binary
     - name: Build static binary
       run: cargo build --release --target x86_64-unknown-linux-gnu

@@ -35,9 +35,10 @@ The `rust-static-build.yml` workflow performs the following steps:
 
 1. **Checks out code** and gets binary build version
 2. **Installs Rust target** for `x86_64-unknown-linux-gnu`
-3. **Builds static binary** with static linking
-4. **Creates tarball** with binary and MD5 checksum
-5. **Uploads artifacts** for use by other workflows
+3. **Tests static build** to ensure compatibility
+4. **Builds static binary** with static linking
+5. **Creates tarball** with binary and MD5 checksum
+6. **Uploads artifacts** for use by other workflows
 
 ## Workflow Details
 

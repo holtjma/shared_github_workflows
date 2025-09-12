@@ -1,0 +1,64 @@
+
+# This workflow runs comprehensive tests on a Rust project.
+# It performs static analysis, documentation tests, and static binary tests to ensure code quality.
+# Steps:
+# - Checkout the code
+# - Make sure the repository is owned by the user, vergen (git describe) will fail if it is not
+# - Install the x86_64-unknown-linux-gnu target (if not already in image)
+# - Run clippy for static analysis and linting
+# - Run documentation tests
+# - Run static binary tests with static linking enabled
+# Inputs:
+# - rust_version - the Rust Docker image version to test with, default is latest
+# Outputs:
+# - No artifacts are produced, this workflow is for testing only
+# Maintenance:
+# - If we have a multi-binary project, we may need to update the test commands to handle that
+
+name: Rust Static Tests
+
+on:
+  workflow_call:
+    inputs:
+      rust_version:
+        description: 'Rust Docker image version'
+        default: 'latest'
+        type: string
+      test_docs:
+        description: 'If true, test the docs'
+        default: true
+        type: boolean
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Or a self-hosted runner if preferred
+    container: rust:${{ inputs.rust_version }} # Uses the official Rust Docker image
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    # Make sure the repository is owned by the user, vergen (git describe)will fail if it is not
+    - name: Chown repository to enable git describe
+      run: chown -R $(id -u):$(id -g) $PWD
+
+    # Install the x86_64-unknown-linux-gnu target (if not already in image)
+    - name: Install x86_64-unknown-linux-gnu target (if not already in image)
+      run: rustup target add x86_64-unknown-linux-gnu
+
+    # Run clippy
+    - name: Run clippy
+      run: |
+        rustup component add clippy
+        cargo clippy -- -D warnings
+    
+    # Test docs
+    - name: Test docs
+      if: inputs.test_docs == 'true'
+      run: cargo test --release --doc
+
+    # Test the static binary
+    - name: Test static binary
+      run: cargo test --release --all-targets --target x86_64-unknown-linux-gnu -- --include-ignored
+      env:
+        RUSTFLAGS: "-C target-feature=+crt-static -C relocation-model=static"
