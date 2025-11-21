@@ -79,7 +79,7 @@ jobs:
         # make and populate this particular version
         mkdir -p ${RELEASE_FOLDER}
         BINARY_FILE=./target/x86_64-unknown-linux-gnu/release/${TOOL_NAME}
-        VERSION=`${BINARY_FILE} -V | awk -F '[ -]' '{print $2}'`
+        VERSION=`${BINARY_FILE} -V | awk -F ' ' '{print $2}' | awk -F '-' '{print $1}'`
         TAR_FOLDER="${TOOL_NAME}-v${VERSION}-x86_64-unknown-linux-gnu"
         TARBALL="${TAR_FOLDER}.tar.gz"
         VERSION_FOLDER="${RELEASE_FOLDER}/${TAR_FOLDER}"
