@@ -40,7 +40,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     # Make sure the repository is owned by the user, vergen (git describe)will fail if it is not
     - name: Chown repository to enable git describe
@@ -64,7 +64,7 @@ jobs:
 
     # Upload the binary artifact
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: rust-binary-x86_64-linux
         path: target/x86_64-unknown-linux-gnu/release/${{ inputs.binary_name }}
@@ -99,7 +99,7 @@ jobs:
 
     # Upload the tarball artifact
     - name: Upload tarball
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: rust-tarball-x86_64-linux
         path: release/${{ steps.create_tarball.outputs.tarball }}

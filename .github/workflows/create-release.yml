@@ -51,7 +51,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     - name: Extract changelog section
       id: changelog
@@ -87,7 +87,7 @@ jobs:
         echo "Automated release created from tag ${{ inputs.tag }} and commit ${{ github.sha }}" >> release_body.txt
 
     - name: Upload changelog artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: release-changelog
         path: release_body.txt
@@ -107,14 +107,14 @@ jobs:
     needs: [call-create-static-release, extract-changelog] # needs to run after the static build and changelog extraction have both succeeded
     steps:
     - name: Check if tag already exists
-      uses: mukunku/tag-exists-action@v1.6.0
+      uses: mukunku/tag-exists-action@v1.7.0
       id: check_tag
       with:
         tag: '${{ inputs.tag }}'
 
     - name: Create tag
       if: steps.check_tag.outputs.exists == 'false'
-      uses: actions/github-script@v5
+      uses: actions/github-script@v9
       with:
         script: |
           github.rest.git.createRef({
@@ -133,25 +133,25 @@ jobs:
       contents: write
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     # Download the changelog artifact
     - name: Download changelog artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: release-changelog
         path: ./
 
     # Download the tarball artifact
     - name: Download tarball artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: rust-tarball-x86_64-linux
         path: ./artifacts
 
     # Create the release with the changelog notes and the tarball artifact
     - name: Upload release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3
       with:
         name: ${{ inputs.release_name }} ${{ inputs.tag }}
         tag_name: ${{ inputs.tag }}

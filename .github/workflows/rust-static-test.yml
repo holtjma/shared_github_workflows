@@ -36,7 +36,7 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
     
     # Make sure the repository is owned by the user, vergen (git describe)will fail if it is not
     - name: Chown repository to enable git describe
