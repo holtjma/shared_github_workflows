@@ -8,6 +8,7 @@ Some workflows expect certain file formats, see [docs](./docs/) for detailed des
 |----------|---------|---------|
 | [Update Release](./docs/update-release.md) | Update existing release with changelog | Updated release description |
 | [Create Release](./docs/create-release.md) | Create new release with binary | New release with binary artifacts |
+| [Create Library Release](./docs/create-lib-release.md) | Create new release without a binary | New release with changelog only |
 | [Rust Static Build](./docs/rust-static-build.md) | Build static binary | Binary and tarball artifacts |
 | [Rust Static Test](./docs/rust-static-test.md) | Test Rust project comprehensively | Test results and validation |
 
